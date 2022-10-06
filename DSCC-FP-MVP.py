@@ -40,4 +40,4 @@ class FetchData:
 data_aapl = FetchData('AAPL SMSN.IL')
 print(type(data_aapl.fetch_data_from_to_date(
     start_date='2022-01-28', end_date='2022-10-04', interval='3mo')))
-data_aapl.write_to_csv()
+data_aapl.write_to_csv('Stock_price.csv')
