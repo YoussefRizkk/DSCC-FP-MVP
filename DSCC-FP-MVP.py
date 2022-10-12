@@ -39,5 +39,5 @@ class FetchData:
 
 data_aapl = FetchData('AAPL')
 print(type(data_aapl.fetch_data_from_to_date(
-    start_date='2022-01-28', end_date='2022-10-04', interval='3mo')))
+    start_date='2021-01-01', end_date='2021-12-31')))
 data_aapl.write_to_csv()
