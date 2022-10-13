@@ -8,9 +8,9 @@ class MySQLDatabase:
     def __init__(self) -> None:
         # Create a connection with the SQL server
         self.connect_db = mysql.connector.connect(
-            host='localhost',
-            user='root',
-            password='password'
+            host=config.host,
+            user=config.user,
+            password=config.password
         )
 
         # Create a cursor object
@@ -55,6 +55,12 @@ class MySQLDatabase:
             )
         self.connect_db.commit()
 
+    def execute_sql_command(self, command):
+        self.db_cursor_object.execute(command)
+
+    def fetch_results(self):
+        return self.db_cursor_object.fetchall()
+
 
 my_dict = {'Date': 'VARCHAR(12)',
            'Open': 'FLOAT',
@@ -66,6 +72,12 @@ my_dict = {'Date': 'VARCHAR(12)',
 
 df = pd.read_csv('fetched_data.csv')
 new = MySQLDatabase()
-new.create_database('stock')
+new.create_database('stock_database')
 new.create_table('AAPL', my_dict)
 new.ingest_dataframe(df)
+sql_command = 'SELECT * FROM AAPL'
+new.execute_sql_command(sql_command)
+asd = new.fetch_results()
+df = pd.DataFrame(asd)
+df.columns = my_dict.keys()
+print(df)
