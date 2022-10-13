@@ -37,7 +37,7 @@ class FetchData:
         return self.fetch_data_from_to_date(self.start_date, self.end_date).to_csv(filename)
 
 
-data_aapl = FetchData('AAPL SMSN.IL')
+data_aapl = FetchData('AAPL')
 print(type(data_aapl.fetch_data_from_to_date(
-    start_date='2022-01-28', end_date='2022-10-04', interval='3mo')))
-data_aapl.write_to_csv('Stock_price.csv')
+    start_date='2021-01-01', end_date='2021-12-31')))
+data_aapl.write_to_csv()
