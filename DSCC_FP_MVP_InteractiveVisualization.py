@@ -49,12 +49,11 @@ app.layout = html.Div(
                         )
                     ]
                 ),
-                dcc.Dropdown(
+                dcc.RadioItems(
                     id='filter-columns',
                     className='dropdown',
                     options=[{'label': col_name, 'value': col_name}
                              for col_name in df.columns[1:]],
-                    clearable=False,
                     value='Close'
                 )
             ]
