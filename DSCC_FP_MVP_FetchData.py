@@ -1,11 +1,15 @@
 import yfinance as yf
 import pandas as pd
-from pandas.testing import assert_frame_equal
 
 
 class FetchData:
+    """A class to fetch the stock data. 
+    """
+    object_list = []
+
     def __init__(self, ticker) -> None:
         self.ticker = ticker
+        FetchData.object_list.append(self)
 
     def fetch_data_from_to_date(self, start_date='2021-01-01', end_date='2021-12-31', interval='1d'):
         """Fetch data using Yahoo finance API
@@ -36,8 +40,12 @@ class FetchData:
         """
         return self.fetch_data_from_to_date(self.start_date, self.end_date).to_csv(filename)
 
+    def __repr__(self) -> str:
+        return f'Ticker_{self.ticker}'
 
-data_aapl = FetchData('AAPL')
-print(type(data_aapl.fetch_data_from_to_date(
-    start_date='2021-01-01', end_date='2021-12-31')))
-data_aapl.write_to_csv()
+
+if __name__ == '__main__':
+    data_aapl = FetchData('AAPL')
+    data_aapl.fetch_data_from_to_date(
+        start_date='2021-01-01', end_date='2021-12-31')
+    # data_aapl.write_to_csv()
