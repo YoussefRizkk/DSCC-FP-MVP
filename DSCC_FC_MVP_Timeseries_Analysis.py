@@ -109,6 +109,6 @@ if __name__ == '__main__':
     time_analysis = TimeSeriesAnalysis(df, 'Close')
     time_analysis.plotMovingAverage(
         'Close', 30, plot_upperlowerbound=True, plot_anomalies=True)
-    time_analysis.plot_expotential_smoothing([0.2, 0.5])
-    time_analysis.plot_double_expotential_smoothing([0.02], [0.1])
+    time_analysis.plot_expotential_smoothing([0.02, 0.5])
+    time_analysis.plot_double_expotential_smoothing([0.02, 0.5], [0.05, 0.08])
     plt.show()
