@@ -1,19 +1,22 @@
-from calendar import c
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from sqlalchemy import create_engine
 import pandas as pd
 import numpy as np
-import DSCC_FP_MVP_Configuration as config
-import DSCC_FP_MVP_StatisticalAnalysis as Stat
+from DSCC_FP_MVP_StatisticalAnalysis import StatisticalAnalysis as Stat
+from DSCC_FP_MVP_Storage import MySQLDatabase as db
+
+# Create a connection
+connect_engine = Stat.create_connection(
+    'root', 'password', 'localhost', 'new123')
 
 
-class VisualizeData(Stat.StatisticalAnalysis):
-    def __init__(self) -> None:
-        Stat.StatisticalAnalysis.__init__(self)
+class VisualizeData(Stat):
+    def __init__(self, connect_engine, table_name) -> None:
+        super().__init__(connect_engine, table_name)
 
     def plot_data_as_timeseries(self, col_name):
-        df = self.import_data_from_server('SELECT * FROM AAPL')
+        self.fetch_data_from_sql_server()
+        df = self.df_fetch_from_sql
         df.Date = pd.to_datetime(df.Date)
         fig = plt.figure()
         ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
@@ -27,29 +30,11 @@ class VisualizeData(Stat.StatisticalAnalysis):
         return ax
 
 
-viz_data = VisualizeData()
-ax_open = viz_data.plot_data_as_timeseries('Open')
-ax_high = viz_data.plot_data_as_timeseries('High')
-ax_close = viz_data.plot_data_as_timeseries('Close')
-plt.show()
-
-
-# # Create a SQL engine
-
-
-# # Read the query and put the result in a dataframe
-# df = pd.read_sql_query('SELECT * FROM AAPL', connect_engine)
-# df.Date = pd.to_datetime(df.Date)
-# # print(df)
-
-# # Instantiation of figure object
-# fig = plt.figure()
-# ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-# ax.plot(df.Date, df.Open)
-# print(df.dtypes)
-# ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
-# ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%Y'))
-# plt.show()
-
-# # sns.lineplot(x=df.Date, y=df.Open)
-# # plt.show()
+if __name__ == "__main__":
+    # Visualize data for a single  ticker
+    a = VisualizeData(connect_engine, 'tsla')
+    a.fetch_data_from_sql_server()
+    print(a.df_fetch_from_sql)
+    ax_open = a.plot_data_as_timeseries('Open')
+    ax_high = a.plot_data_as_timeseries('High')
+    plt.show()

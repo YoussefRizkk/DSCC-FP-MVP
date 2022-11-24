@@ -1,83 +1,89 @@
 import DSCC_FP_MVP_Configuration as config
-import mysql.connector
+from DSCC_FP_MVP_FetchData import FetchData as fd
+from sqlalchemy import create_engine, text
+from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy.types import Float, DateTime
 import pandas as pd
+import regex as re
 
 
-class MySQLDatabase:
+class MySQLDatabase(fd):
+    """A class to create an instance of MySQLDatabase in AWS cloud or locally.
+        In addition will create table and ingest data from the pandas dataframe.
+        Also will raed the data from the sql server.
+        For AWS cloud connection, add in the host-api-url, username and password in the config file DSCC_FP_MVP_Configuration
+        This class inherits from the class FechData from DSCC_FP_MVP_FetchData.py.
+    """
+    created_db_ticker_object_list = []
 
-    def __init__(self) -> None:
-        # Create a connection with the SQL server
-        self.connect_db = mysql.connector.connect(
-            host=config.host,
-            user=config.user,
-            password=config.password
+    def __init__(self, ticker_symbol) -> None:
+        # To call all the methods from the base class
+        super().__init__(ticker_symbol)
+        # This is done bcos MySQL  only accepts lowercase as table names
+        self.table_name = re.sub(r'\.', '_', ticker_symbol).lower()
+        # Passing self here below will pass the object created to perform this method call
+        self.dataframe = fd.fetch_data_from_to_date(self)
+        # Append the list of created objects into a list
+        MySQLDatabase.created_db_ticker_object_list.append(self)
+
+    def ingest_df_to_sql(self):
+        self.dataframe.to_sql(self.table_name,
+                              MySQLDatabase.connect_engine,
+                              if_exists='replace',
+                              index=False,
+                              chunksize=500,
+                              dtype={
+                                  'Date': DateTime,
+                                  'Open': Float,
+                                  'High': Float,
+                                  'Low': Float,
+                                  'Close': Float,
+                                  'Adj Close': Float,
+                                  'Volume': Float
+                              }
+                              )
+        print(f'DATA INGESTED SUCESSFULLY')
+        # MySQLDatabase.connect_engine.commit()
+
+    @classmethod
+    def create_connection(cls, username, password, host_address, database_name):
+        url = f'mysql+mysqlconnector://{username}:{password}@{host_address}/{database_name}'
+        cls.connect_engine = create_engine(
+            url
         )
+        if not database_exists(cls.connect_engine.url):
+            print(
+                f'Database {database_name} does not exist. Creating new database')
+            create_database(cls.connect_engine.url)
+            print(f'Created database {database_name}')
+        return cls.connect_engine
 
-        # Create a cursor object
-        self.db_cursor_object = self.connect_db.cursor()
+    @classmethod
+    def execute_sql_query(cls, query):
+        results = MySQLDatabase.connect_engine.execute(text(query))
+        return results
 
-    def create_database(self, database_name):
-        self.db_name = database_name
-        try:
-            self.db_cursor_object.execute(
-                f'DROP DATABASE IF EXISTS {self.db_name}')
-            self.db_cursor_object.execute(f'CREATE DATABASE {self.db_name}')
-            print(f'Database {self.db_name} created')
-        except:
-            print(f'Couldn\'t create the database')
-        self.connect_db.commit()
-
-    def create_table(self, table_name, column_and_datatype):
-        self.table_name = table_name
-        self.column_and_datatype = column_and_datatype
-        self.db_cursor_object.execute(
-            f'USE {self.db_name}'
+    def fetch_data_from_sql_server(self):
+        """Fetches data from the sql server as assigns into an object variable 'df_fetch_from_sql'
+           Can acess the df using this variable name
+        """
+        self.df_fetch_from_sql = pd.read_sql_table(
+            self.table_name,
+            self.connect_engine
         )
-        column_as_list = []
-        for column in column_and_datatype:
-            column_as_list.append(f'{column} {column_and_datatype[column]}')
-        column_as_str = str(column_as_list)
-        column_as_str = column_as_str.replace('\'', '')
-        column_as_str = column_as_str.replace('[', '')
-        column_as_str = column_as_str.replace(']', '')
-        self.db_cursor_object.execute(
-            f'CREATE TABLE {table_name} ({column_as_str})')
-        print(
-            f'Table {table_name} created with columns and data types as ({column_as_str})')
-        self.connect_db.commit()
+        # return self.df_fetch_from_sql
 
-    def ingest_dataframe(self, df):
-        column_name = self.column_and_datatype.keys()
-        self.column_name = ', '.join(column_name)
-        for column, rows in df.iterrows():
-            self.db_cursor_object.execute(
-                f'INSERT INTO {self.table_name}({self.column_name}) VALUES {tuple(rows.values)}'
-            )
-        self.connect_db.commit()
-
-    def execute_sql_command(self, command):
-        self.db_cursor_object.execute(command)
-
-    def fetch_results(self):
-        return self.db_cursor_object.fetchall()
+    def __repr__(self) -> str:
+        return f'DB_{self.table_name}'
 
 
-my_dict = {'Date': 'VARCHAR(12)',
-           'Open': 'FLOAT',
-           'High': 'FLOAT',
-           'Low': 'FLOAT',
-           'Close': 'FLOAT',
-           'Adj_Close': 'FLOAT',
-           'Volume': 'FLOAT'}
-
-df = pd.read_csv('fetched_data.csv')
-new = MySQLDatabase()
-new.create_database('stock_database')
-new.create_table('AAPL', my_dict)
-new.ingest_dataframe(df)
-sql_command = 'SELECT * FROM AAPL'
-new.execute_sql_command(sql_command)
-asd = new.fetch_results()
-df = pd.DataFrame(asd)
-df.columns = my_dict.keys()
-print(df)
+if __name__ == '__main__':
+    # The below code is for testing
+    print(f'For Testing')
+    a = MySQLDatabase('AAPL')
+    MySQLDatabase.create_connection(
+        'root', 'password', 'localhost', 'stock_check')
+    print(a.dataframe)
+    a.ingest_df_to_sql()
+    a.fetch_data_from_sql_server()
+    print(a.df_fetch_from_sql)
