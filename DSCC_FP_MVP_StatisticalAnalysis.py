@@ -1,23 +1,30 @@
-from sqlalchemy import create_engine
+from DSCC_FP_MVP_Storage import MySQLDatabase as db
+# from sqlalchemy import create_engine
 import pandas as pd
 import numpy as np
-import DSCC_FP_MVP_Configuration as config
+
+# Create an SQL DB connection
+connect_engine = db.create_connection(
+    'root', 'password', 'localhost', 'new123')
 
 
-class StatisticalAnalysis():
-    def __init__(self) -> None:
-        # Create a SQL engine
-        self.connect_engine = create_engine(
-            # Creating a connection using the server username, password and db name
-            "mysql+mysqlconnector://{}:{}@{}/{}".format(
-                'root', 'password', 'localhost', 'stock_database')
-        )
+class StatisticalAnalysis(db):
+    created_stat_object_list = []
 
-    def import_data_from_server(self, query):
-        self.df = pd.read_sql_query(query, self.connect_engine)
-        return self.df
+    def __init__(self, connect_engine, table_name) -> None:
+        # Takes the connection created previously
+        # Use that connection to fetch the corresponding table_name
+        # And fetch the data from MySQL server
+        self.connect_engine = connect_engine
+        self.table_name = table_name
+        # Use the method from the parent class-MySQLDatabase by using super()
+        # Here i used this method to fetch the data from the SQL server.
+        # The variables to compute this is defined above.
+        super().fetch_data_from_sql_server()
+        StatisticalAnalysis.created_stat_object_list.append(self)
 
-    def statistical_calc_col(self, df, col_name):
+    @staticmethod
+    def statistical_calc_col(df, col_name):
         min = df[col_name].min()
         max = df[col_name].max()
         data_range = abs(max-min)
@@ -29,18 +36,24 @@ class StatisticalAnalysis():
                      'Median': median, 'Mean': mean, 'Variance': var, 'Standard_Deviation': std}
         return pd.DataFrame([stat_dict])
 
-    def describe_dataframe(self, dataframe):
+    def describe_dataframe(self):
         df_statistical = pd.DataFrame(columns=['Minimum', 'Maximum',
                                                'Range', 'Median', 'Mean', 'Variance', 'Standard_Deviation'])
-        col_name_list = ['Open', 'High', 'Low', 'Close', 'Adj_Close', 'Volume']
+        col_name_list = ['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume']
         for col_name in col_name_list:
-            df = self.statistical_calc_col(dataframe, col_name)
+            df = StatisticalAnalysis.statistical_calc_col(
+                self.df_fetch_from_sql, col_name)
             df_statistical = pd.concat([df_statistical, df])
         df_statistical.index = col_name_list
         return df_statistical
 
+    def __repr__(self) -> str:
+        return f'SA_{self.table_name}'
 
-stat = StatisticalAnalysis()
-df = stat.import_data_from_server('SELECT * FROM AAPL')
-stat_df = stat.describe_dataframe(df)
-print(stat_df)
+
+if __name__ == '__main__':
+    stat = StatisticalAnalysis(connect_engine, 'tsla')
+    # df = stat.import_data_from_server('SELECT * FROM AAPL')
+    stat_df = stat.describe_dataframe()
+    print(stat_df)
+    print(StatisticalAnalysis.created_stat_object_list)
